@@ -14,6 +14,15 @@ from datetime import datetime
 logger = singer.get_logger('target_s3_csv')
 
 
+class CustomJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder to handle particular cases. E.g., `decimal.Decimal`
+    types will be serialized to `str` in order to keep precision."""
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return str(obj)
+        return super(CustomJSONEncoder, self).default(obj)
+
+
 def validate_config(config):
     """Validates config"""
     errors = []
@@ -115,7 +124,7 @@ def flatten_record(d, parent_key=[], sep='__'):
         if isinstance(v, collections.MutableMapping):
             items.extend(flatten_record(v, parent_key + [k], sep=sep).items())
         else:
-            items.append((new_key, json.dumps(v) if type(v) is list else v))
+            items.append((new_key, json.dumps(v, cls=CustomJSONEncoder) if type(v) is list else v))
     return dict(items)
 
 
